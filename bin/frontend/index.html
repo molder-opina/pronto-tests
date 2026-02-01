@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Pruebas - PRONTO</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; min-height: 100vh; }
+        
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .header-actions button { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-left: 10px; transition: all 0.2s; }
+        .header-actions button:hover { background: rgba(255,255,255,0.3); }
+        
+        .container { display: flex; height: calc(100vh - 70px); }
+        
+        .sidebar { width: 280px; background: white; border-right: 1px solid #e1e5eb; overflow-y: auto; padding: 20px 0; }
+        .sidebar-section { margin-bottom: 20px; }
+        .sidebar-title { font-size: 11px; text-transform: uppercase; color: #8e99a4; padding: 0 20px; margin-bottom: 10px; font-weight: 600; letter-spacing: 0.5px; }
+        .sidebar-item { display: flex; align-items: center; padding: 10px 20px; cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent; }
+        .sidebar-item:hover { background: #f5f7fa; }
+        .sidebar-item.active { background: #f0f4ff; border-left-color: #667eea; }
+        .sidebar-item .icon { width: 20px; margin-right: 12px; font-size: 16px; }
+        .sidebar-item .name { flex: 1; font-size: 14px; color: #2d3748; }
+        .sidebar-item .count { background: #e1e5eb; color: #4a5568; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+        .sidebar-item.all-tests .count { background: #667eea; color: white; }
+        
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .toolbar { background: white; border-bottom: 1px solid #e1e5eb; padding: 15px 25px; display: flex; align-items: center; gap: 15px; }
+        .toolbar-title { font-size: 18px; font-weight: 600; color: #2d3748; flex: 1; }
+        .toolbar-actions { display: flex; gap: 10px; }
+        .btn { padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a6fd6; }
+        .btn-primary:disabled { background: #a0aec0; cursor: not-allowed; }
+        .btn-secondary { background: #edf2f7; color: #4a5568; }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-success:hover { background: #38a169; }
+        .btn-danger { background: #fc8181; color: white; }
+        .btn-danger:hover { background: #f56565; }
+        
+        .content { flex: 1; overflow-y: auto; padding: 25px; }
+        
+        .test-list { display: flex; flex-direction: column; gap: 8px; }
+        .test-item { background: white; border-radius: 8px; padding: 15px 20px; display: flex; align-items: center; cursor: pointer; border: 1px solid #e1e5eb; transition: all 0.15s; }
+        .test-item:hover { border-color: #667eea; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1); }
+        .test-item.selected { border-color: #667eea; background: #f0f4ff; }
+        .test-item.running { border-color: #ed8936; background: #fffaf0; }
+        .test-item.passed { border-color: #48bb78; background: #f0fff4; }
+        .test-item.failed { border-color: #fc8181; background: #fff5f5; }
+        .test-checkbox { width: 18px; height: 18px; border: 2px solid #cbd5e0; border-radius: 4px; margin-right: 15px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+        .test-item.selected .test-checkbox { background: #667eea; border-color: #667eea; }
+        .test-item.selected .test-checkbox::after { content: '✓'; color: white; font-size: 12px; }
+        .test-info { flex: 1; }
+        .test-name { font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 4px; }
+        .test-path { font-size: 12px; color: #8e99a4; }
+        .test-status { padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .test-status.pending { background: #edf2f7; color: #4a5568; }
+        .test-status.running { background: #ed8936; color: white; animation: pulse 1s infinite; }
+        .test-status.passed { background: #48bb78; color: white; }
+        .test-status.failed { background: #fc8181; color: white; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        
+        .progress-bar { height: 4px; background: #e1e5eb; border-radius: 2px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.3s ease; }
+        
+        .stats { display: flex; gap: 30px; padding: 20px 25px; background: white; border-bottom: 1px solid #e1e5eb; }
+        .stat-item { display: flex; align-items: center; gap: 10px; }
+        .stat-value { font-size: 24px; font-weight: 700; color: #2d3748; }
+        .stat-label { font-size: 13px; color: #8e99a4; }
+        .stat-item.passed .stat-value { color: #48bb78; }
+        .stat-item.failed .stat-value { color: #fc8181; }
+        .stat-item.running .stat-value { color: #ed8936; }
+        
+        .console { background: #1a202c; color: #a0aec0; padding: 20px; font-family: 'Monaco', 'Menlo', monospace; font-size: 13px; line-height: 1.6; max-height: 250px; overflow-y: auto; }
+        .console-line { margin-bottom: 4px; }
+        .console-line.info { color: #63b3ed; }
+        .console-line.success { color: #68d391; }
+        .console-line.error { color: #fc8181; }
+        .console-line.warning { color: #f6ad55; }
+        
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal.hidden { display: none; }
+        .modal-content { background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 25px; }
+        .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 15px; color: #2d3748; }
+        .modal-body { margin-bottom: 20px; color: #4a5568; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #8e99a4; }
+        .empty-state-icon { font-size: 48px; margin-bottom: 15px; opacity: 0.5; }
+        .empty-state-title { font-size: 18px; font-weight: 500; color: #4a5568; margin-bottom: 8px; }
+        .empty-state-desc { font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Panel de Pruebas - PRONTO</h1>
+        <div class="header-actions">
+            <button onclick="refreshTests()">Recargar Tests</button>
+            <button onclick="showSettings()">Configuración</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">Categorías</div>
+                <div class="sidebar-item all-tests active" onclick="filterTests('all')">
+                    <span class="icon">📋</span>
+                    <span class="name">Todos los Tests</span>
+                    <span class="count" id="count-all">0</span>
+                </div>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">Por Tipo</div>
+                <div class="sidebar-item" onclick="filterTests('unit')">
+                    <span class="icon">🔧</span>
+                    <span class="name">Unit Tests</span>
+                    <span class="count" id="count-unit">0</span>
+                </div>
+                <div class="sidebar-item" onclick="filterTests('api')">
+                    <span class="icon">🔌</span>
+                    <span class="name">API Tests</span>
+                    <span class="count" id="count-api">0</span>
+                </div>
+                <div class="sidebar-item" onclick="filterTests('playwright')">
+                    <span class="icon">🌐</span>
+                    <span class="name">E2E (Playwright)</span>
+                    <span class="count" id="count-playwright">0</span>
+                </div>
+                <div class="sidebar-item" onclick="filterTests('client')">
+                    <span class="icon">👤</span>
+                    <span class="name">Clientes</span>
+                    <span class="count" id="count-client">0</span>
+                </div>
+                <div class="sidebar-item" onclick="filterTests('employee')">
+                    <span class="icon">👔</span>
+                    <span class="name">Empleados</span>
+                    <span class="count" id="count-employee">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main">
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-total">0</span>
+                    <span class="stat-label">Total</span>
+                </div>
+                <div class="stat-item passed">
+                    <span class="stat-value" id="stat-passed">0</span>
+                    <span class="stat-label">Pasados</span>
+                </div>
+                <div class="stat-item failed">
+                    <span class="stat-value" id="stat-failed">0</span>
+                    <span class="stat-label">Fallidos</span>
+                </div>
+                <div class="stat-item running">
+                    <span class="stat-value" id="stat-running">0</span>
+                    <span class="stat-label">Ejecutando</span>
+                </div>
+            </div>
+            
+            <div class="toolbar">
+                <span class="toolbar-title" id="current-filter">Todos los Tests</span>
+                <div class="toolbar-actions">
+                    <button class="btn btn-secondary" onclick="selectAll()">Seleccionar Todos</button>
+                    <button class="btn btn-secondary" onclick="deselectAll()">Deseleccionar</button>
+                    <button class="btn btn-primary" id="run-btn" onclick="runSelectedTests()">
+                        <span>▶</span> Ejecutar Seleccionados
+                    </button>
+                    <button class="btn btn-success" onclick="runAllTests()">
+                        <span>▶▶</span> Ejecutar Todo
+                    </button>
+                </div>
+            </div>
+            
+            <div class="test-list" id="test-list">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📂</div>
+                    <div class="empty-state-title">Cargando tests...</div>
+                    <div class="empty-state-desc">Los tests se detectarán automáticamente</div>
+                </div>
+            </div>
+            
+            <div class="console" id="console">
+                <div class="console-line info">ℹ Panel de pruebas iniciado. Cargando tests...</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal hidden" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-title">Configuración</div>
+            <div class="modal-body">
+                <p>Python: <code id="python-version">-</code></p>
+                <p>Node.js: <code id="node-version">-</code></p>
+                <p>Npx: <code id="npx-version">-</code></p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allTests = [];
+        let filteredTests = [];
+        let selectedTests = new Set();
+        let currentFilter = 'all';
+        let isRunning = false;
+
+        async function init() {
+            await detectTests();
+            updateStats();
+            renderTests();
+            
+            document.getElementById('python-version').textContent = await checkCommand('python3 --version');
+            document.getElementById('node-version').textContent = await checkCommand('node --version');
+            document.getElementById('npx-version').textContent = await checkCommand('npx --version');
+        }
+
+        async function checkCommand(cmd) {
+            try {
+                const response = await fetch(`/api/run?cmd=${encodeURIComponent(cmd)}`);
+                const data = await response.json();
+                return data.output || 'No disponible';
+            } catch {
+                return 'No disponible';
+            }
+        }
+
+        async function detectTests() {
+            allTests = [];
+            
+            try {
+                const response = await fetch('/api/discover');
+                const data = await response.json();
+                allTests = data.tests;
+                
+                consoleLog(`✅ Detectados ${allTests.length} tests`, 'success');
+                updateCounts();
+            } catch (e) {
+                consoleLog(`❌ Error detectando tests: ${e.message}`, 'error');
+            }
+        }
+
+        async function runSelectedTests() {
+            if (isRunning) return;
+            const tests = allTests.filter(t => selectedTests.has(t.id));
+            if (tests.length === 0) {
+                consoleLog('⚠ No hay tests seleccionados', 'warning');
+                return;
+            }
+            await executeTests(tests);
+        }
+
+        async function runAllTests() {
+            if (isRunning) return;
+            const tests = filteredTests.length > 0 ? filteredTests : allTests;
+            await executeTests(tests);
+        }
+
+        async function executeTests(tests) {
+            isRunning = true;
+            updateRunButton();
+            
+            let passed = 0;
+            let failed = 0;
+            
+            tests.forEach(test => {
+                test.status = 'running';
+                test.startTime = Date.now();
+            });
+            renderTests();
+            updateStats();
+            
+            consoleLog(`🚀 Ejecutando ${tests.length} test(s)...`, 'info');
+            
+            for (const test of tests) {
+                try {
+                    const response = await fetch('/api/run-test', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ test })
+                    });
+                    const result = await response.json();
+                    
+                    test.status = result.success ? 'passed' : 'failed';
+                    test.duration = result.duration;
+                    test.output = result.output;
+                    
+                    if (result.success) passed++; else failed++;
+                    
+                    consoleLog(`${result.success ? '✓' : '✗'} ${test.name}: ${result.success ? 'PASÓ' : 'FALLÓ'} (${result.duration}ms)`, 
+                        result.success ? 'success' : 'error');
+                } catch (e) {
+                    test.status = 'failed';
+                    test.output = e.message;
+                    failed++;
+                    consoleLog(`✗ ${test.name}: ERROR - ${e.message}`, 'error');
+                }
+                
+                renderTests();
+                updateStats();
+            }
+            
+            consoleLog(`🏁 Ejecución completada: ${passed} passed, ${failed} failed`, 'info');
+            isRunning = false;
+            updateRunButton();
+        }
+
+        function filterTests(type) {
+            currentFilter = type;
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            const typeNames = {
+                'all': 'Todos los Tests',
+                'unit': 'Unit Tests',
+                'api': 'API Tests',
+                'playwright': 'E2E (Playwright)',
+                'client': 'Clientes',
+                'employee': 'Empleados'
+            };
+            document.getElementById('current-filter').textContent = typeNames[type];
+            
+            if (type === 'all') {
+                filteredTests = [...allTests];
+            } else {
+                filteredTests = allTests.filter(t => t.type === type);
+            }
+            
+            selectedTests.clear();
+            renderTests();
+        }
+
+        function selectAll() {
+            filteredTests.forEach(t => selectedTests.add(t.id));
+            renderTests();
+        }
+
+        function deselectAll() {
+            selectedTests.clear();
+            renderTests();
+        }
+
+        function toggleTest(id) {
+            if (selectedTests.has(id)) {
+                selectedTests.delete(id);
+            } else {
+                selectedTests.add(id);
+            }
+            renderTests();
+        }
+
+        function updateCounts() {
+            const counts = { all: allTests.length, unit: 0, api: 0, playwright: 0, client: 0, employee: 0 };
+            allTests.forEach(t => {
+                if (counts[t.type] !== undefined) counts[t.type]++;
+            });
+            
+            Object.keys(counts).forEach(key => {
+                const el = document.getElementById(`count-${key}`);
+                if (el) el.textContent = counts[key];
+            });
+        }
+
+        function updateStats() {
+            const total = filteredTests.length || allTests.length;
+            const passed = allTests.filter(t => t.status === 'passed').length;
+            const failed = allTests.filter(t => t.status === 'failed').length;
+            const running = allTests.filter(t => t.status === 'running').length;
+            
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-passed').textContent = passed;
+            document.getElementById('stat-failed').textContent = failed;
+            document.getElementById('stat-running').textContent = running;
+        }
+
+        function renderTests() {
+            const container = document.getElementById('test-list');
+            const tests = filteredTests.length > 0 ? filteredTests : allTests;
+            
+            if (tests.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div class="empty-state-title">No hay tests</div>
+                        <div class="empty-state-desc">No se encontraron tests para esta categoría</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = tests.map(test => `
+                <div class="test-item ${test.status || 'pending'} ${selectedTests.has(test.id) ? 'selected' : ''}" 
+                     onclick="toggleTest('${test.id}')">
+                    <div class="test-checkbox"></div>
+                    <div class="test-info">
+                        <div class="test-name">${test.name}</div>
+                        <div class="test-path">${test.path}</div>
+                    </div>
+                    <span class="test-status ${test.status || 'pending'}">
+                        ${test.status === 'running' ? '⏳' : test.status === 'passed' ? '✓' : test.status === 'failed' ? '✗' : '○'}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function updateRunButton() {
+            const btn = document.getElementById('run-btn');
+            btn.disabled = isRunning;
+            btn.innerHTML = isRunning ? '<span>⏳</span> Ejecutando...' : '<span>▶</span> Ejecutar Seleccionados';
+        }
+
+        function consoleLog(msg, type = 'info') {
+            const console = document.getElementById('console');
+            const line = document.createElement('div');
+            line.className = `console-line ${type}`;
+            line.textContent = msg;
+            console.appendChild(line);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function refreshTests() {
+            consoleLog('🔄 Recargando tests...', 'info');
+            selectedTests.clear();
+            allTests.forEach(t => { t.status = 'pending'; t.output = null; });
+            detectTests();
+            renderTests();
+            updateStats();
+        }
+
+        function showSettings() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        init();
+    </script>
+</body>
+</html>
