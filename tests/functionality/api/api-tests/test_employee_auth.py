@@ -112,7 +112,7 @@ class TestEmployeeAuthentication:
             email="admin@test.com",
             email_hash=hash_identifier("admin@test.com"),
             auth_hash=hash_credentials("admin@test.com", "Test123!"),
-            role="admin_roles",
+            role="admin",
             is_active=True,
         )
         db_session.add(admin)

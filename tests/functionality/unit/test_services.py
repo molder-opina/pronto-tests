@@ -66,7 +66,11 @@ class TestAuthService:
         from shared.auth.service import EmployeeData
 
         waiter = EmployeeData(
-            id=2, name="Waiter", email="waiter@test.com", role=Roles.WAITER, additional_roles=None
+            id=2,
+            name="Waiter",
+            email="waiter@test.com",
+            role=Roles.WAITER,
+            additional_roles=None,
         )
 
         # Should have waiter role
@@ -83,7 +87,7 @@ class TestBusinessInfoService:
         """Test reading RESTAURANT_NAME from env file."""
         name = BusinessInfoService._get_restaurant_name_from_env()
 
-        # Should read from config/general.env
+        # Should read from .env
         assert name is not None
         assert isinstance(name, str)
         assert len(name) > 0
