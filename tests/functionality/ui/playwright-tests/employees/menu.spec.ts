@@ -1,6 +1,19 @@
 import { test, expect } from '@playwright/test'
+import { installApi404405Guard } from '../helpers/api_guard'
 
 test.describe('Menu Management', () => {
+  test.beforeEach(async ({ page }) => {
+    const guard = installApi404405Guard(page)
+    ;(page as any).__apiGuard = guard
+  })
+
+  test.afterEach(async ({ page }) => {
+    const guard = (page as any).__apiGuard as
+      | { assertNoFailures: () => void }
+      | undefined
+    guard?.assertNoFailures()
+  })
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/login')
     await page.fill('input[type="email"]', 'admin@pronto.com')
