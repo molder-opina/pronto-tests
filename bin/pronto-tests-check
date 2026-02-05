@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+MODULES_FILE = REPO_ROOT / "pronto-docs" / "modules.yml"
+
+
+def run(cmd):
+    return subprocess.run(cmd, cwd=REPO_ROOT, shell=False, capture_output=True, text=True)
+
+
+def load_modules():
+    return json.loads(MODULES_FILE.read_text())["modules"]
+
+
+def determine_changed_modules(modules):
+    base = "origin/main"
+    res = run(["git", "merge-base", base, "HEAD"])
+    if res.returncode != 0:
+        base = "HEAD~1"
+    diff = run(["git", "diff", "--name-only", f"{base}...HEAD"])
+    if diff.returncode != 0:
+        return set()
+    files = [f for f in diff.stdout.splitlines() if f.strip()]
+    touched = set()
+    for f in files:
+        fpath = Path(f)
+        best = None
+        best_name = None
+        for mod in modules:
+            root = Path(mod["path_root"].lstrip("./"))
+            if root in fpath.parents or fpath.parts[:1] == (root.parts[0],):
+                if best is None or len(str(root)) > len(str(best)):
+                    best = root
+                    best_name = mod["name"]
+        if best_name:
+            touched.add(best_name)
+    return touched
+
+
+def main():
+    mode = "changed"
+    if len(sys.argv) > 1:
+        mode = sys.argv[1]
+    modules = load_modules()
+    if mode == "changed":
+        touched = determine_changed_modules(modules)
+        for mod in modules:
+            if mod["name"] in touched:
+                suites = mod.get("test_suites", [])
+                cmds = mod.get("test_cmds", {})
+                if suites and not cmds:
+                    print(f"ERROR: {mod['name']} missing test_cmds")
+                    sys.exit(1)
+        print("OK")
+        return
+    # full
+    for mod in modules:
+        suites = mod.get("test_suites", [])
+        cmds = mod.get("test_cmds", {})
+        if suites and not cmds:
+            print(f"ERROR: {mod['name']} missing test_cmds")
+            sys.exit(1)
+    print("OK")
+
+
+if __name__ == "__main__":
+    main()

@@ -79,6 +79,6 @@ Las pruebas de diseño toman screenshots de las pantallas y los analizan con Ope
 ## Requisitos
 
 - Node.js 18+
-- Python 3.9+
+- Python 3.11+
 - Playwright (`npx playwright install`)
 - OpenCode CLI (para análisis de diseño)

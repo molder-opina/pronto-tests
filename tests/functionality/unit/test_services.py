@@ -22,7 +22,7 @@ class TestAuthService:
 
             assert result is not None
             assert result.employee.email == sample_employee.email
-            assert result.employee.role == "super_admin"
+            assert result.employee.role == "system"
 
     def test_authenticate_invalid_email(self, db_session):
         """Test authentication with invalid email."""
@@ -44,15 +44,15 @@ class TestAuthService:
 
             assert "Credenciales inválidas" in str(exc_info.value)
 
-    def test_has_role_super_admin(self):
-        """Test that super_admin has all roles."""
+    def test_has_role_system(self):
+        """Test that system has all roles."""
         from shared.auth.service import EmployeeData
 
         admin = EmployeeData(
             id=1,
             name="Admin",
             email="admin@test.com",
-            role=Roles.SUPER_ADMIN,
+            role=Roles.SYSTEM,
             additional_roles=None,
         )
 

@@ -121,19 +121,19 @@ class TestJWTRoleBasedAccess:
         # Should be denied
         assert response.status_code in [401, 403]
 
-    def test_super_admin_bypass_all_roles(self, employee_client, sample_employee):
-        """Test that super_admin can access all endpoints regardless of role requirements."""
-        # Create super_admin token
+    def test_system_bypass_all_roles(self, employee_client, sample_employee):
+        """Test that system can access all endpoints regardless of role requirements."""
+        # Create system token
         token = create_access_token(
             employee_id=sample_employee.id,
             employee_name=sample_employee.name,
             employee_email=sample_employee.email,
-            employee_role="super_admin",
+            employee_role="system",
             employee_additional_roles=[],
             active_scope="system",
         )
 
-        # Access system endpoint (super admin should have access)
+        # Access system endpoint (system should have access)
         response = employee_client.get(
             "/system/api/settings",
             headers={"Authorization": f"Bearer {token}"},

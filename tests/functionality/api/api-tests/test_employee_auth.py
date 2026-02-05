@@ -132,15 +132,15 @@ class TestEmployeeAuthentication:
         from shared.models import Employee
         from shared.security import hash_credentials, hash_identifier
 
-        system_admin = Employee(
-            name="Test System Admin",
+        system_user = Employee(
+            name="Test System User",
             email="system@test.com",
             email_hash=hash_identifier("system@test.com"),
             auth_hash=hash_credentials("system@test.com", "Test123!"),
             role="system",
             is_active=True,
         )
-        db_session.add(system_admin)
+        db_session.add(system_user)
         db_session.commit()
 
         response = employee_client.post(
@@ -348,8 +348,8 @@ class TestEmployeeAuthentication:
         from shared.security import hash_credentials, hash_identifier
 
         # Create system admin with waiter scope
-        system_admin = Employee(
-            name="System Admin",
+        system_user = Employee(
+            name="System User",
             email="system@test.com",
             email_hash=hash_identifier("system@test.com"),
             auth_hash=hash_credentials("system@test.com", "Test123!"),
@@ -357,7 +357,7 @@ class TestEmployeeAuthentication:
             additional_roles='["waiter"]',
             is_active=True,
         )
-        db_session.add(system_admin)
+        db_session.add(system_user)
         db_session.commit()
 
         # Create handoff token
@@ -367,7 +367,7 @@ class TestEmployeeAuthentication:
 
         token_record = SuperAdminHandoffToken(
             token_hash=token_hash,
-            employee_id=system_admin.id,
+            employee_id=system_user.id,
             target_scope="waiter",
             expires_at=utcnow() + timedelta(seconds=60),
             ip_address="127.0.0.1",
