@@ -28,8 +28,8 @@ class TestEmployeeAuthentication:
 
     def test_waiter_login_success(self, employee_client, db_session):
         """Test waiter console login."""
-        from shared.models import Employee
-        from shared.security import hash_credentials, hash_identifier
+        from pronto_shared.models import Employee
+        from pronto_shared.security import hash_credentials, hash_identifier
 
         # Create waiter employee
         waiter = Employee(
@@ -54,8 +54,8 @@ class TestEmployeeAuthentication:
 
     def test_chef_login_success(self, employee_client, db_session):
         """Test chef console login."""
-        from shared.models import Employee
-        from shared.security import hash_credentials, hash_identifier
+        from pronto_shared.models import Employee
+        from pronto_shared.security import hash_credentials, hash_identifier
 
         chef = Employee(
             name="Test Chef",
@@ -79,8 +79,8 @@ class TestEmployeeAuthentication:
 
     def test_cashier_login_success(self, employee_client, db_session):
         """Test cashier console login."""
-        from shared.models import Employee
-        from shared.security import hash_credentials, hash_identifier
+        from pronto_shared.models import Employee
+        from pronto_shared.security import hash_credentials, hash_identifier
 
         cashier = Employee(
             name="Test Cashier",
@@ -104,8 +104,8 @@ class TestEmployeeAuthentication:
 
     def test_admin_login_success(self, employee_client, db_session):
         """Test admin console login."""
-        from shared.models import Employee
-        from shared.security import hash_credentials, hash_identifier
+        from pronto_shared.models import Employee
+        from pronto_shared.security import hash_credentials, hash_identifier
 
         admin = Employee(
             name="Test Admin",
@@ -129,8 +129,8 @@ class TestEmployeeAuthentication:
 
     def test_system_login_success(self, employee_client, db_session):
         """Test system console login."""
-        from shared.models import Employee
-        from shared.security import hash_credentials, hash_identifier
+        from pronto_shared.models import Employee
+        from pronto_shared.security import hash_credentials, hash_identifier
 
         system_user = Employee(
             name="Test System User",
@@ -165,8 +165,8 @@ class TestEmployeeAuthentication:
 
     def test_login_inactive_account(self, employee_client, db_session):
         """Test login with inactive account."""
-        from shared.models import Employee
-        from shared.security import hash_credentials, hash_identifier
+        from pronto_shared.models import Employee
+        from pronto_shared.security import hash_credentials, hash_identifier
 
         inactive = Employee(
             name="Inactive User",
@@ -194,7 +194,7 @@ class TestEmployeeAuthentication:
         """Test that JWT token contains correct employee information."""
         import jwt
 
-        from shared.jwt_service import get_jwt_secret
+        from pronto_shared.jwt_service import get_jwt_secret
 
         response = employee_client.post(
             "/login",
@@ -266,7 +266,7 @@ class TestEmployeeAuthentication:
 
     def test_logout_clears_jwt_cookies(self, employee_client, sample_employee):
         """Test that logout clears JWT cookies."""
-        from shared.jwt_service import get_jwt_secret
+        from pronto_shared.jwt_service import get_jwt_secret
 
         response = employee_client.post(
             "/login",
@@ -306,8 +306,8 @@ class TestEmployeeAuthentication:
 
     def test_waiter_logout(self, employee_client, db_session):
         """Test waiter console logout."""
-        from shared.models import Employee
-        from shared.security import hash_credentials, hash_identifier
+        from pronto_shared.models import Employee
+        from pronto_shared.security import hash_credentials, hash_identifier
 
         waiter = Employee(
             name="Test Waiter",
@@ -343,9 +343,9 @@ class TestEmployeeAuthentication:
         import secrets
         from datetime import timedelta
 
-        from shared.datetime_utils import utcnow
-        from shared.models import Employee, SuperAdminHandoffToken
-        from shared.security import hash_credentials, hash_identifier
+        from pronto_shared.datetime_utils import utcnow
+        from pronto_shared.models import Employee, SuperAdminHandoffToken
+        from pronto_shared.security import hash_credentials, hash_identifier
 
         # Create system admin with waiter scope
         system_user = Employee(
@@ -390,8 +390,8 @@ class TestEmployeeAuthentication:
 
     def test_scope_guard_redirects_wrong_scope(self, employee_client, db_session):
         """Test that scope guard redirects when JWT scope doesn't match URL scope."""
-        from shared.models import Employee
-        from shared.security import hash_credentials, hash_identifier
+        from pronto_shared.models import Employee
+        from pronto_shared.security import hash_credentials, hash_identifier
 
         waiter = Employee(
             name="Test Waiter",

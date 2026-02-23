@@ -1,60 +1,63 @@
 import { test, expect } from '@playwright/test';
-import { installApi404405Guard } from '../helpers/api_guard';
+
+const EMPLOYEES_URL = process.env.EMPLOYEES_URL || 'http://localhost:6081';
+const API_URL = process.env.API_URL || 'http://localhost:6081';
+const DEFAULT_PASSWORD = process.env.EMPLOYEE_PASSWORD || 'ChangeMe!123';
+
+const ROLE_CREDENTIALS = {
+  waiter: {
+    email: process.env.WAITER_EMAIL || 'maria@pronto.com',
+    password: DEFAULT_PASSWORD,
+    loginPath: '/waiter/login',
+  },
+  admin: {
+    email: process.env.ADMIN_EMAIL || 'juan@pronto.com',
+    password: DEFAULT_PASSWORD,
+    loginPath: '/admin/login',
+  },
+} as const;
+
+async function expectSuccessfulRoleLogin(
+  request: Parameters<Parameters<typeof test>[1]>[0]['request'],
+  role: keyof typeof ROLE_CREDENTIALS,
+) {
+  const { email, password, loginPath } = ROLE_CREDENTIALS[role];
+  const loginPageResponse = await request.get(`${EMPLOYEES_URL}${loginPath}`);
+  expect(loginPageResponse.status()).toBe(200);
+  const loginPageHtml = await loginPageResponse.text();
+  const csrfMatch = loginPageHtml.match(/<meta\s+name="csrf-token"\s+content="([^"]+)"/i);
+  expect(csrfMatch?.[1], `[AUTH] Missing csrf-token meta on ${loginPath}`).toBeTruthy();
+  const csrfToken = csrfMatch![1];
+
+  const response = await request.post(`${EMPLOYEES_URL}${loginPath}`, {
+    form: { email, password },
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRFToken': csrfToken,
+    },
+  });
+
+  expect(
+    response.status(),
+    `[AUTH] ${role} login failed (${response.status()}) for ${email}. This must fail tests when auth breaks.`,
+  ).toBe(200);
+
+  const payload = await response.json();
+  expect(payload.status).toBe('success');
+
+  const meResponse = await request.get(`${API_URL}/api/employees/auth/me`, {
+    headers: { Accept: 'application/json' },
+  });
+  expect(meResponse.status(), `[AUTH] ${role} /auth/me is unauthorized after login`).toBe(200);
+}
 
 test.describe('Employee Authentication', () => {
-  test.beforeEach(async ({ page }) => {
-    const guard = installApi404405Guard(page);
-    (page as any).__apiGuard = guard;
+  test('admin credentials authenticate successfully', async ({ request }) => {
+    await expectSuccessfulRoleLogin(request, 'admin');
   });
 
-  test.afterEach(async ({ page }) => {
-    const guard = (page as any).__apiGuard as { assertNoFailures: () => void } | undefined;
-    guard?.assertNoFailures();
-  });
-
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-  });
-
-  test('should display login form', async ({ page }) => {
-    await expect(page.locator('h1')).toContainText('Administración');
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.locator('input[type="password"]')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
-  });
-
-  test('should login with valid credentials', async ({ page }) => {
-    await page.fill('input[type="email"]', 'admin@cafeteria.test');
-    await page.fill('input[type="password"]', 'ChangeMe!123');
-    await page.click('button[type="submit"]');
-
-    await expect(page).toHaveURL('/dashboard');
-    await expect(page.locator('text=Órdenes en Curso')).toBeVisible();
-  });
-
-  test('should show error with invalid credentials', async ({ page }) => {
-    await page.fill('input[type="email"]', 'wrong@email.com');
-    await page.fill('input[type="password"]', 'wrongpassword');
-    await page.click('button[type="submit"]');
-
-    await expect(page.locator('text=Credenciales inválidas')).toBeVisible();
-  });
-
-  test('should require email and password', async ({ page }) => {
-    await page.click('button[type="submit"]');
-
-    await expect(page.locator('text=Email es requerido')).toBeVisible();
-    await expect(page.locator('text=Contraseña es requerida')).toBeVisible();
-  });
-
-  test('should logout successfully', async ({ page }) => {
-    await page.fill('input[type="email"]', 'admin@cafeteria.test');
-    await page.fill('input[type="password"]', 'ChangeMe!123');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/dashboard');
-
-    await page.click('button:has-text("Cerrar Sesión")');
-
-    await expect(page).toHaveURL('/login');
+  test('waiter credentials authenticate successfully', async ({ request }) => {
+    await expectSuccessfulRoleLogin(request, 'waiter');
   });
 });

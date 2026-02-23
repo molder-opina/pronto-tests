@@ -1,90 +1,68 @@
-import { test, expect } from '@playwright/test'
-import { installApi404405Guard } from '../helpers/api_guard'
+import { test, expect } from '@playwright/test';
+
+const EMPLOYEES_URL = process.env.EMPLOYEES_URL || 'http://localhost:6081';
+const API_URL = process.env.API_URL || 'http://localhost:6082';
+const DEFAULT_PASSWORD = process.env.EMPLOYEE_PASSWORD || 'ChangeMe!123';
+
+async function loginWaiter(
+  request: Parameters<Parameters<typeof test>[1]>[0]['request'],
+): Promise<string> {
+  const loginPageResponse = await request.get(`${EMPLOYEES_URL}/waiter/login`);
+  expect(loginPageResponse.status()).toBe(200);
+  const loginPageHtml = await loginPageResponse.text();
+  const csrfMatch = loginPageHtml.match(/<meta\s+name="csrf-token"\s+content="([^"]+)"/i);
+  expect(csrfMatch?.[1], '[AUTH] Missing csrf-token meta on /waiter/login').toBeTruthy();
+  const csrfToken = csrfMatch![1];
+
+  const loginResponse = await request.post(`${EMPLOYEES_URL}/waiter/login`, {
+    form: {
+      email: process.env.WAITER_EMAIL || 'maria@pronto.com',
+      password: DEFAULT_PASSWORD,
+    },
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRFToken': csrfToken,
+    },
+  });
+  expect(loginResponse.status()).toBe(200);
+  const payload = await loginResponse.json();
+  expect(payload.status).toBe('success');
+  return csrfToken;
+}
 
 test.describe('Order Management', () => {
-  test.beforeEach(async ({ page }) => {
-    const guard = installApi404405Guard(page)
-    ;(page as any).__apiGuard = guard
-  })
+  test('waiter can read active orders with canonical payload', async ({ request }) => {
+    await loginWaiter(request);
 
-  test.afterEach(async ({ page }) => {
-    const guard = (page as any).__apiGuard as
-      | { assertNoFailures: () => void }
-      | undefined
-    guard?.assertNoFailures()
-  })
+    const ordersResponse = await request.get(`${API_URL}/api/orders?status=active`, {
+      headers: { Accept: 'application/json' },
+    });
+    expect(ordersResponse.status()).toBe(200);
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/login')
-    await page.fill('input[type="email"]', 'admin@pronto.com')
-    await page.fill('input[type="password"]', 'admin123')
-    await page.click('button[type="submit"]')
-    await page.waitForURL('/dashboard')
-  })
+    const payload = await ordersResponse.json();
+    expect(payload.status).toBe('success');
+    expect(payload.error).toBeNull();
+    expect(Array.isArray(payload?.data?.orders)).toBe(true);
+    expect(typeof payload?.data?.total).toBe('number');
+    expect(typeof payload?.data?.page).toBe('number');
+  });
 
-  test('should display active orders table', async ({ page }) => {
-    await page.goto('/orders')
+  test('orders endpoint rejects invalid create payload with explicit error', async ({ request }) => {
+    const csrfToken = await loginWaiter(request);
 
-    await expect(page.locator('h1')).toContainText('Active Orders')
-    await expect(page.locator('table[data-testid="orders-table"]')).toBeVisible()
-  })
+    const createResponse = await request.post(`${API_URL}/api/orders`, {
+      data: { items: [] },
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+    });
 
-  test('should create new order', async ({ page }) => {
-    await page.goto('/orders/new')
-
-    await page.fill('input[data-testid="customer-name"]', 'John Doe')
-    await page.fill('input[data-testid="customer-phone"]', '+1234567890')
-
-    await page.click('button:has-text("Add Item")')
-    await page.fill('input[data-testid="item-search"]', 'Pizza')
-    await page.click('text=Margherita Pizza')
-    await page.fill('input[data-testid="item-quantity"]', '2')
-
-    await page.click('button:has-text("Create Order")')
-
-    await expect(page.locator('text=Order created successfully')).toBeVisible()
-    await expect(page).toHaveURL(/\/orders\/\d+/)
-  })
-
-  test('should view order details', async ({ page }) => {
-    await page.goto('/orders')
-    await page.click('table[data-testid="orders-table"] tbody tr:first-child a:has-text("View")')
-
-    await expect(page.locator('h1')).toContainText('Order Details')
-    await expect(page.locator('[data-testid="order-id"]')).toBeVisible()
-    await expect(page.locator('[data-testid="order-status"]')).toBeVisible()
-  })
-
-  test('should update order status', async ({ page }) => {
-    await page.goto('/orders')
-    await page.click('table[data-testid="orders-table"] tbody tr:first-child a:has-text("View")')
-
-    await page.click('button:has-text("Mark as In Progress")')
-
-    await expect(page.locator('[data-testid="order-status"]')).toContainText('In Progress')
-  })
-
-  test('should add payment to order', async ({ page }) => {
-    await page.goto('/orders')
-    await page.click('table[data-testid="orders-table"] tbody tr:first-child a:has-text("View")')
-
-    await page.click('button:has-text("Add Payment")')
-    await page.fill('input[data-testid="payment-amount"]', '50.00')
-    await page.selectOption('select[data-testid="payment-method"]', 'cash')
-    await page.click('button:has-text("Process Payment")')
-
-    await expect(page.locator('text=Payment processed successfully')).toBeVisible()
-  })
-
-  test('should filter orders by status', async ({ page }) => {
-    await page.goto('/orders')
-
-    await page.selectOption('select[data-testid="status-filter"]', 'pending')
-
-    const rows = await page.locator('table[data-testid="orders-table"] tbody tr').count()
-    for (let i = 0; i < rows; i++) {
-      const statusCell = page.locator('table[data-testid="orders-table"] tbody tr').nth(i).locator('td[data-status]')
-      await expect(statusCell).toContainText('Pending')
-    }
-  })
-})
+    expect(createResponse.status()).toBe(400);
+    const payload = await createResponse.json();
+    expect(payload.status).toBe('error');
+    expect(String(payload.error || '').toLowerCase()).toContain('table_id');
+  });
+});

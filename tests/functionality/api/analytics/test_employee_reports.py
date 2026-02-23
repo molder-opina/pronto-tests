@@ -27,7 +27,7 @@ class TestEmployeeReports:
         """Test /api/reports/waiter-performance endpoint."""
         response = authenticated_client.get(
             "/api/reports/waiter-performance",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -64,7 +64,7 @@ class TestEmployeeReports:
         """Test /api/reports/waiter-tips endpoint."""
         response = authenticated_client.get(
             "/api/reports/waiter-tips",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -100,7 +100,7 @@ class TestEmployeeReports:
         """Test that waiter performance is sorted by total sales."""
         response = authenticated_client.get(
             "/api/reports/waiter-performance",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -117,7 +117,7 @@ class TestEmployeeReports:
         """Test that waiter tips are sorted by total tips."""
         response = authenticated_client.get(
             "/api/reports/waiter-tips",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -138,7 +138,7 @@ class TestEmployeeReports:
         ]
         
         for endpoint in endpoints:
-            response = client.get(endpoint, params=date_range)
+            response = client.get(endpoint, query_string=date_range)
             assert response.status_code == 401
 
     def test_waiter_performance_with_no_data(self, authenticated_client):
@@ -148,7 +148,7 @@ class TestEmployeeReports:
         
         response = authenticated_client.get(
             "/api/reports/waiter-performance",
-            params={"start": future_start, "end": future_end}
+            query_string={"start": future_start, "end": future_end}
         )
         
         assert response.status_code == 200

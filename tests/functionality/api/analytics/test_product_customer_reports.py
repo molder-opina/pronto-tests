@@ -28,7 +28,7 @@ class TestProductReports:
         """Test /api/reports/top-products endpoint."""
         response = authenticated_client.get(
             "/api/reports/top-products",
-            params={**date_range, "limit": 10}
+            query_string={**date_range, "limit": 10}
         )
         
         assert response.status_code == 200
@@ -61,7 +61,7 @@ class TestProductReports:
         for limit in limits:
             response = authenticated_client.get(
                 "/api/reports/top-products",
-                params={**date_range, "limit": limit}
+                query_string={**date_range, "limit": limit}
             )
             
             assert response.status_code == 200
@@ -73,7 +73,7 @@ class TestProductReports:
         """Test /api/reports/category-performance endpoint."""
         response = authenticated_client.get(
             "/api/reports/category-performance",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -102,7 +102,7 @@ class TestProductReports:
         """Test that category revenue percentages sum to ~100%."""
         response = authenticated_client.get(
             "/api/reports/category-performance",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -133,7 +133,7 @@ class TestCustomerReports:
         """Test /api/reports/customer-segments endpoint."""
         response = authenticated_client.get(
             "/api/reports/customer-segments",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -164,7 +164,7 @@ class TestCustomerReports:
         """Test that customer segmentation logic is correct."""
         response = authenticated_client.get(
             "/api/reports/customer-segments",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -201,5 +201,5 @@ class TestCustomerReports:
         ]
         
         for endpoint in endpoints:
-            response = client.get(endpoint, params=date_range)
+            response = client.get(endpoint, query_string=date_range)
             assert response.status_code == 401

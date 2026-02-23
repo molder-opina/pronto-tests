@@ -8,7 +8,7 @@ import json
 
 import pytest
 
-from shared.jwt_service import create_access_token
+from pronto_shared.jwt_service import create_access_token
 
 
 @pytest.mark.integration
@@ -216,7 +216,7 @@ class TestJWTRoleBasedAccess:
 
         import jwt
 
-        from shared.jwt_service import JWT_ALGORITHM, get_jwt_secret
+        from pronto_shared.jwt_service import JWT_ALGORITHM, get_jwt_secret
 
         secret = get_jwt_secret()
         now = datetime.now(timezone.utc)

@@ -26,7 +26,7 @@ class TestOperationalReports:
         """Test /api/reports/operational-metrics endpoint."""
         response = authenticated_client.get(
             "/api/reports/operational-metrics",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -48,7 +48,7 @@ class TestOperationalReports:
         """Test operational metrics data structure."""
         response = authenticated_client.get(
             "/api/reports/operational-metrics",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -90,7 +90,7 @@ class TestOperationalReports:
         """Test delivery rate metric structure."""
         response = authenticated_client.get(
             "/api/reports/operational-metrics",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -116,7 +116,7 @@ class TestOperationalReports:
         """Test that operational metrics require authentication."""
         response = client.get(
             "/api/reports/operational-metrics",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 401
@@ -128,7 +128,7 @@ class TestOperationalReports:
         
         response = authenticated_client.get(
             "/api/reports/operational-metrics",
-            params={"start": future_start, "end": future_end}
+            query_string={"start": future_start, "end": future_end}
         )
         
         assert response.status_code == 200

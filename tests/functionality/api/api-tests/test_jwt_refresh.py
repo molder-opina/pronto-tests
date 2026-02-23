@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-from shared.jwt_service import create_access_token, create_refresh_token
+from pronto_shared.jwt_service import create_access_token, create_refresh_token
 
 
 @pytest.mark.integration

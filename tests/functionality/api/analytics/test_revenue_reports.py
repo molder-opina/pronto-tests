@@ -28,7 +28,7 @@ class TestRevenueReports:
         """Test /api/reports/kpis endpoint."""
         response = authenticated_client.get(
             "/api/reports/kpis",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -61,7 +61,7 @@ class TestRevenueReports:
         """Test /api/reports/sales endpoint."""
         response = authenticated_client.get(
             "/api/reports/sales",
-            params={**date_range, "granularity": "day"}
+            query_string={**date_range, "granularity": "day"}
         )
         
         assert response.status_code == 200
@@ -90,7 +90,7 @@ class TestRevenueReports:
         for granularity in granularities:
             response = authenticated_client.get(
                 "/api/reports/sales",
-                params={**date_range, "granularity": granularity}
+                query_string={**date_range, "granularity": granularity}
             )
             
             assert response.status_code == 200
@@ -101,7 +101,7 @@ class TestRevenueReports:
         """Test /api/reports/peak-hours endpoint."""
         response = authenticated_client.get(
             "/api/reports/peak-hours",
-            params=date_range
+            query_string=date_range
         )
         
         assert response.status_code == 200
@@ -139,14 +139,14 @@ class TestRevenueReports:
         ]
         
         for endpoint in endpoints:
-            response = client.get(endpoint, params=date_range)
+            response = client.get(endpoint, query_string=date_range)
             assert response.status_code == 401
 
     def test_reports_with_invalid_dates(self, authenticated_client):
         """Test reports with invalid date ranges."""
         response = authenticated_client.get(
             "/api/reports/kpis",
-            params={"start": "invalid", "end": "invalid"}
+            query_string={"start": "invalid", "end": "invalid"}
         )
         
         # Should handle gracefully (either 400 or use defaults)
@@ -159,7 +159,7 @@ class TestRevenueReports:
         
         response = authenticated_client.get(
             "/api/reports/kpis",
-            params={"start": future_start, "end": future_end}
+            query_string={"start": future_start, "end": future_end}
         )
         
         assert response.status_code == 200

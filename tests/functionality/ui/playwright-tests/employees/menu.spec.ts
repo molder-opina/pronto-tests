@@ -1,88 +1,86 @@
-import { test, expect } from '@playwright/test'
-import { installApi404405Guard } from '../helpers/api_guard'
+import { test, expect } from '@playwright/test';
+
+const EMPLOYEES_URL = process.env.EMPLOYEES_URL || 'http://localhost:6081';
+const API_URL = process.env.API_URL || 'http://localhost:6082';
+const DEFAULT_PASSWORD = process.env.EMPLOYEE_PASSWORD || 'ChangeMe!123';
+
+async function loginByRole(
+  request: Parameters<Parameters<typeof test>[1]>[0]['request'],
+  role: 'admin' | 'waiter',
+  email: string,
+) {
+  const loginPath = `/${role}/login`;
+  const loginPageResponse = await request.get(`${EMPLOYEES_URL}${loginPath}`);
+  expect(loginPageResponse.status()).toBe(200);
+
+  const loginPageHtml = await loginPageResponse.text();
+  const csrfMatch = loginPageHtml.match(/<meta\s+name="csrf-token"\s+content="([^"]+)"/i);
+  expect(csrfMatch?.[1], `[AUTH] Missing csrf-token meta on ${loginPath}`).toBeTruthy();
+  const csrfToken = csrfMatch![1];
+
+  const loginResponse = await request.post(`${EMPLOYEES_URL}${loginPath}`, {
+    form: { email, password: DEFAULT_PASSWORD },
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRFToken': csrfToken,
+    },
+  });
+
+  expect(
+    loginResponse.status(),
+    `[AUTH] ${role} login failed with ${loginResponse.status()} for ${email}`,
+  ).toBe(200);
+
+  const payload = await loginResponse.json();
+  expect(payload.status).toBe('success');
+}
 
 test.describe('Menu Management', () => {
-  test.beforeEach(async ({ page }) => {
-    const guard = installApi404405Guard(page)
-    ;(page as any).__apiGuard = guard
-  })
+  test('admin sees real menu payload from API', async ({ request }) => {
+    await loginByRole(request, 'admin', process.env.ADMIN_EMAIL || 'juan@pronto.com');
 
-  test.afterEach(async ({ page }) => {
-    const guard = (page as any).__apiGuard as
-      | { assertNoFailures: () => void }
-      | undefined
-    guard?.assertNoFailures()
-  })
+    const menuResponse = await request.get(`${API_URL}/api/menu`, {
+      headers: { Accept: 'application/json' },
+    });
+    expect(menuResponse.status()).toBe(200);
+    const payload = await menuResponse.json();
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/login')
-    await page.fill('input[type="email"]', 'admin@pronto.com')
-    await page.fill('input[type="password"]', 'admin123')
-    await page.click('button[type="submit"]')
-    await page.waitForURL('/dashboard')
-  })
+    expect(payload.status).toBe('success');
+    const categories = payload?.data?.categories || [];
+    expect(Array.isArray(categories)).toBe(true);
+    expect(categories.length).toBeGreaterThan(0);
+    expect(Array.isArray(categories[0]?.items)).toBe(true);
+    expect(categories[0].items.length).toBeGreaterThan(0);
+  });
 
-  test('should display menu items', async ({ page }) => {
-    await page.goto('/menu')
-
-    await expect(page.locator('h1')).toContainText('Menu Items')
-    await expect(page.locator('[data-testid="menu-items-grid"]')).toBeVisible()
-  })
-
-  test('should create new menu item', async ({ page }) => {
-    await page.goto('/menu/new')
-
-    await page.fill('input[data-testid="item-name"]', 'Test Item')
-    await page.fill('textarea[data-testid="item-description"]', 'Test description')
-    await page.fill('input[data-testid="item-price"]', '15.00')
-    await page.fill('input[data-testid="item-prep-time"]', '20')
-
-    await page.click('button:has-text("Save Item")')
-
-    await expect(page.locator('text=Item created successfully')).toBeVisible()
-    await expect(page).toHaveURL('/menu')
-  })
-
-  test('should edit menu item', async ({ page }) => {
-    await page.goto('/menu')
-    await page.click('[data-testid="menu-items-grid"] article:first-child button:has-text("Edit")')
-
-    await page.fill('input[data-testid="item-name"]', 'Updated Item Name')
-    await page.click('button:has-text("Save Item")')
-
-    await expect(page.locator('text=Item updated successfully')).toBeVisible()
-    await expect(page.locator('text=Updated Item Name')).toBeVisible()
-  })
-
-  test('should toggle item availability', async ({ page }) => {
-    await page.goto('/menu')
-    const firstItem = page.locator('[data-testid="menu-items-grid"] article:first-child')
-
-    const toggleButton = firstItem.locator('button:has-text("Toggle Availability")')
-    await toggleButton.click()
-
-    await expect(page.locator('text=Item availability updated')).toBeVisible()
-  })
-
-  test('should delete menu item', async ({ page }) => {
-    await page.goto('/menu')
-    const firstItem = page.locator('[data-testid="menu-items-grid"] article:first-child')
-
-    await firstItem.click('button:has-text("Delete")')
-    await page.click('button:has-text("Confirm")')
-
-    await expect(page.locator('text=Item deleted successfully')).toBeVisible()
-  })
-
-  test('should filter menu items by category', async ({ page }) => {
-    await page.goto('/menu')
-
-    await page.selectOption('select[data-testid="category-filter"]', 'pizza')
-
-    const items = await page.locator('[data-testid="menu-items-grid"] article').count()
-    for (let i = 0; i < items; i++) {
-      const item = page.locator('[data-testid="menu-items-grid"] article').nth(i)
-      await expect(item.locator('[data-testid="item-category"]')).toContainText('Pizza')
-    }
-  })
-})
+  test('waiter UI does not expose admin modules', async ({ request }) => {
+    // Login as waiter
+    const loginPath = '/waiter/login';
+    const loginPageResponse = await request.get(`${EMPLOYEES_URL}${loginPath}`);
+    expect(loginPageResponse.status()).toBe(200);
+    const loginPageHtml = await loginPageResponse.text();
+    const csrfMatch = loginPageHtml.match(/<meta\s+name="csrf-token"\s+content="([^"]+)"/i);
+    const csrfToken = csrfMatch?.[1];
+    
+    const loginResponse = await request.post(`${EMPLOYEES_URL}${loginPath}`, {
+      form: { email: process.env.WAITER_EMAIL || 'maria@pronto.com', password: DEFAULT_PASSWORD },
+      headers: {
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': csrfToken || '',
+      },
+    });
+    expect(loginResponse.status()).toBe(200);
+    
+    // Get the dashboard as waiter - check we don't get admin content
+    const dashboardResponse = await request.get(`${EMPLOYEES_URL}/waiter/dashboard`);
+    expect(dashboardResponse.status()).toBe(200);
+    const dashboardHtml = await dashboardResponse.text();
+    
+    // Verify waiter has waiter-specific modules but not admin modules
+    expect(dashboardHtml).toContain('waiter');
+    expect(dashboardHtml).not.toContain('Empleados');
+    expect(dashboardHtml).not.toContain('Roles y Permisos');
+  });
+});

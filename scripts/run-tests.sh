@@ -50,7 +50,10 @@ case "$1" in
       fail=1
     fi
     echo "  - API Tests..."
-    if have_cmd pytest; then
+    VENV_PATH="$SCRIPT_DIR/../.venv-test"
+    if [[ -x "$VENV_PATH/bin/pytest" ]]; then
+      run_step "api (pytest)" "$VENV_PATH/bin/pytest" tests/functionality/api/ -v
+    elif have_cmd pytest; then
       run_step "api (pytest)" pytest tests/functionality/api/ -v
     else
       echo "MISSING: pytest (api tests)" >&2
@@ -100,7 +103,10 @@ case "$1" in
       fail=1
     fi
     echo "  - API Tests..."
-    if have_cmd pytest; then
+    VENV_PATH="$SCRIPT_DIR/../.venv-test"
+    if [[ -x "$VENV_PATH/bin/pytest" ]]; then
+      run_step "api (pytest)" "$VENV_PATH/bin/pytest" tests/functionality/api/ -v
+    elif have_cmd pytest; then
       run_step "api (pytest)" pytest tests/functionality/api/ -v
     else
       echo "MISSING: pytest (api tests)" >&2

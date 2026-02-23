@@ -8,7 +8,7 @@ import json
 
 import pytest
 
-from shared.jwt_service import create_access_token
+from pronto_shared.jwt_service import create_access_token
 
 
 @pytest.mark.integration
